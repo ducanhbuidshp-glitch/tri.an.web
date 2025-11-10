@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Tri ân thầy cô — Lời tri ân online</title>
+<style>
+  :root{
+    --bg:#f7fbff;--card:#ffffff;--accent:#1f6feb;--muted:#6b7280;--shadow:0 8px 24px rgba(31,111,235,0.08);
+    font-family:Inter,"Segoe UI",Roboto,"Helvetica Neue",Arial;
+  }
+  *{box-sizing:border-box}html,body{height:100%;}
+  body{margin:0;background:linear-gradient(180deg,#f3f9ff 0%,#ffffff 60%);
+    display:flex;align-items:center;justify-content:center;padding:36px;color:#0f1724;}
+  .wrapper{width:100%;max-width:1000px;background:var(--card);border-radius:18px;padding:28px;
+    box-shadow:var(--shadow);display:grid;grid-template-columns:420px 1fr;gap:24px;align-items:start;}
+  .panel{padding:20px;border-radius:12px;background:linear-gradient(180deg,rgba(31,111,235,0.03),rgba(31,111,235,0.01));
+    border:1px solid rgba(31,111,235,0.06);}
+  h1{margin:0 0 8px;font-size:20px;color:var(--accent);}
+  p.lead{margin:0 0 18px;color:var(--muted);font-size:14px;}
+  label{display:block;font-size:13px;color:var(--muted);margin-bottom:8px;}
+  input[type=text],textarea{width:100%;padding:12px 14px;border-radius:10px;border:1px solid rgba(15,23,36,0.06);
+    background:#fff;font-size:14px;outline:none;box-shadow:0 2px 8px rgba(15,23,36,0.03) inset;resize:vertical;}
+  textarea{min-height:110px;}
+  .btn{background:var(--accent);color:#fff;padding:10px 14px;border-radius:10px;border:none;cursor:pointer;font-weight:600;
+    box-shadow:0 8px 18px rgba(31,111,235,0.12);}
+  .btn.ghost{background:transparent;color:var(--accent);border:1px solid rgba(31,111,235,0.12);box-shadow:none;}
+  .small{font-size:13px;color:var(--muted);margin-top:12px}
+  .tile-grid{display:flex;flex-wrap:wrap;gap:14px;margin-top:12px;}
+  .card{width:calc(50% - 7px);background:linear-gradient(180deg,#fff,#fbfdff);border-radius:12px;padding:12px;
+    box-shadow:0 6px 18px rgba(12,23,56,0.06);transition:transform .35s cubic-bezier(.2,.9,.3,1);}
+  .card:hover{transform:translateY(-6px) scale(1.02);}
+  .card .from{font-weight:700;color:#0f1724;font-size:13px}
+  .card .msg{color:var(--muted);font-size:13px;margin-top:8px;white-space:pre-wrap;line-height:1.35}
+  .empty{color:var(--muted);text-align:center;padding:60px 10px;}
+  .top-badge{position:absolute;left:18px;top:18px;background:linear-gradient(90deg,rgba(31,111,235,0.12),rgba(31,111,235,0.05));
+    padding:8px 10px;border-radius:10px;font-weight:600;color:var(--accent);font-size:13px;}
+  @media (max-width:920px){.wrapper{grid-template-columns:1fr;padding:16px;}.card{width:100%}}
+  #confettiCanvas{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;}
+</style>
+</head>
+<body>
+<div class="wrapper">
+  <div class="panel">
+    <h1>Tri ân thầy cô</h1>
+    <p class="lead">Gửi một lời tri ân ấm áp — hiển thị ngay với hiệu ứng nhẹ nhàng.</p>
+    <label>Tên người gửi</label><input id="ten" type="text" placeholder="Ví dụ: Nguyễn Văn A" />
+    <label style="margin-top:12px">Lời tri ân</label><textarea id="loichuc" placeholder="Viết lời chúc..."></textarea>
+    <div style="display:flex;gap:8px;margin-top:12px;">
+      <button id="btnGui" class="btn">Gửi lời tri ân</button>
+      <button id="btnMau" class="btn ghost">Gợi ý lời chúc</button>
+    </div>
+    <button id="btnXoa" class="btn ghost" style="margin-top:12px;width:100%">Xóa tất cả</button>
+    <p class="small">Lời chúc được lưu chung trên máy chủ. Mọi người đều thấy ngay khi bạn gửi!</p>
+  </div>
+    <footer>Trang web tri ân thầy cô 20/11 • Tạo bởi sinh viên Bùi Đức Anh – Lớp Đại học CNTT4.K25</footer>
+  </div>
+
+  <div class="showcase">
+    <div class="stage" id="stage" style="position:relative;min-height:280px;border:1px solid rgba(15,23,36,0.03);border-radius:14px;padding:18px;">
+      <div class="top-badge">Tường lời tri ân</div>
+      <canvas id="confettiCanvas"></canvas>
+      <div id="grid" class="tile-grid">
+        <div class="empty" id="emptyNote">Chưa có lời tri ân nào — mời bạn gửi lời chúc nhé!</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+import { getFirestore, collection, addDoc, onSnapshot, orderBy, query, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+
+// cấu hình firebase của bạn
+const firebaseConfig = {
+  apiKey: "AIzaSyCfEkDjOtiEOOVBeK3T1O9urWettUg7mag",
+  authDomain: "danh-aef72.firebaseapp.com",
+  projectId: "danh-aef72",
+  storageBucket: "danh-aef72.firebasestorage.app",
+  messagingSenderId: "169906850293",
+  appId: "1:169906850293:web:3a88f67233310696d778bc",
+  measurementId: "G-9BTY2FRV2Y"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const col = collection(db, "tri_an_messages");
+
+const TEN=document.getElementById('ten'),LOI=document.getElementById('loichuc'),
+BTN_GUI=document.getElementById('btnGui'),BTN_MAU=document.getElementById('btnMau'),
+BTN_XOA=document.getElementById('btnXoa'),GRID=document.getElementById('grid'),
+EMPTY=document.getElementById('emptyNote');
+const MAU_LOI=[
+  "Thầy/cô là người truyền cảm hứng để em dám mơ lớn. Cảm ơn thầy/cô rất nhiều!",
+  "Cảm ơn thầy/cô đã tận tâm chỉ dạy, cho em kiến thức và niềm tin.",
+  "Những bài giảng của thầy/cô luôn ý nghĩa và truyền lửa. Kính chúc thầy/cô sức khỏe!",
+  "Cảm ơn thầy/cô đã kiên nhẫn với tụi em. Em sẽ luôn nhớ những lời dạy đó.",
+  "Nhờ thầy/cô mà em tìm được đam mê với ngành này. Tri ân thầy/cô!"
+];
+
+function render(list){GRID.innerHTML='';if(list.length===0){GRID.appendChild(EMPTY);return;}
+list.forEach((n,i)=>{const c=document.createElement('div');c.className='card';c.style.animationDelay=(i*0.05)+'s';
+c.innerHTML=`<div class="from">— ${escapeHtml(n.ten||'Một người bạn')}</div><div class="msg">${escapeHtml(n.msg)}</div>`;
+GRID.appendChild(c);});}
+function escapeHtml(s){return s?s.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('\n','<br>'):'';}
+
+onSnapshot(query(col,orderBy('ts','desc')),snap=>{const arr=[];snap.forEach(d=>arr.push(d.data()));render(arr);});
+BTN_GUI.addEventListener('click',async()=>{const ten=TEN.value.trim()||'Một người bạn',msg=LOI.value.trim();
+if(!msg){LOI.animate([{transform:'translateX(0)'},{transform:'translateX(-6px)'},{transform:'translateX(6px)'},{transform:'translateX(0)'}],{duration:350});return;}
+await addDoc(col,{ten,msg,ts:serverTimestamp()});TEN.value='';LOI.value='';confettiBurst();});
+BTN_MAU.onclick=()=>LOI.value=MAU_LOI[Math.floor(Math.random()*MAU_LOI.length)];
+BTN_XOA.onclick=()=>alert('Xóa tất cả nên thực hiện trong Firebase Console.');
+
+const canvas=document.getElementById('confettiCanvas'),ctx=canvas.getContext('2d');
+function resizeCanvas(){canvas.width=canvas.offsetWidth;canvas.height=canvas.offsetHeight;}
+window.addEventListener('resize',resizeCanvas);resizeCanvas();
+let confettiParticles=[];
+function random(a,b){return Math.random()*(b-a)+a;}
+function pickColor(){const p=['#1f6feb','#60a5fa','#8ec5ff','#bfdcfe','#cfe9ff','#0ea5a4'];return p[Math.floor(Math.random()*p.length)];}
+function createConfetti(){for(let i=0;i<40;i++)confettiParticles.push({x:random(0,canvas.width),y:random(-canvas.height,0),vx:random(-1.5,1.5),vy:random(2,5),size:random(6,12),rot:random(0,360),color:pickColor(),life:random(60,120)});}
+function confettiBurst(){createConfetti();let t=0;const duration=140;
+function step(){t++;ctx.clearRect(0,0,canvas.width,canvas.height);
+for(let i=confettiParticles.length-1;i>=0;i--){const p=confettiParticles[i];p.x+=p.vx;p.y+=p.vy;p.vy+=0.06;p.rot+=p.vx*4;p.life--;
+ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.rot*Math.PI/180);
+ctx.fillStyle=p.color;ctx.fillRect(-p.size/2,-p.size/2,p.size,p.size*0.6);ctx.restore();
+if(p.y>canvas.height+40||p.life<=0)confettiParticles.splice(i,1);}
+if(t<duration&&confettiParticles.length>0)requestAnimationFrame(step);else setTimeout(()=>ctx.clearRect(0,0,canvas.width,canvas.height),300);}
+requestAnimationFrame(step);}
+</script>
+</body>
+</html>
